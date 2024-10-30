@@ -15,11 +15,35 @@ class ProductViewSet(viewsets.ModelViewSet):
         product = self.get_object()
         amount = request.data.get("amount", 1)
 
+        # Валидация значения amount
+        if not isinstance(amount, int) or amount <= 0:
+            return Response(
+                {"error": "Invalid amount. Please provide a positive integer."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Проверка, достаточно ли остатков
         if product.quantity >= amount:
             product.quantity -= amount
             product.save()
-            return Response({"status": "stock reduced"}, status=status.HTTP_200_OK)
-        return Response({"error": "Not enough stock"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "status": "Stock reduced",
+                    "product_id": product.id,
+                    "remaining_stock": product.quantity
+                },
+                status=status.HTTP_200_OK
+            )
+
+        # Недостаточно остатков
+        return Response(
+            {
+                "error": "Not enough stock",
+                "requested_amount": amount,
+                "available_stock": product.quantity
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 class TypeViewSet(viewsets.ModelViewSet):
